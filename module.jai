@@ -45,10 +45,16 @@ BeginProfileEvent :: inline ( id: string, data: string = "", color: u32 = PERFOR
 }
 
 // End an instrumentation event. Must be matched with a call to BeginProfileEvent within the same function
-
 EndProfileEvent :: inline ()
 {
 	PerformanceAPI_EndEvent();
+}
+
+// Automatic instrumentation event begin+end  for current scope
+ProfileEvent :: ( id: string, data: string = "", color: u32 = PERFORMANCEAPI_DEFAULT_COLOR ) #expand
+{
+	PerformanceAPI_BeginEvent_N( id.data, cast(u16) id.count, data.data, cast(u16) data.count, color );
+	`defer PerformanceAPI_EndEvent();
 }
 
 #scope_file
