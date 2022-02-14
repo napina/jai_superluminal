@@ -28,8 +28,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 // Bindings by Ville Ruusutie
 
-PERFORMANCEAPI_MAKE_COLOR :: (r: u32, g: u32, b: u32) -> u32 { return (r << 24) | (g << 16) | (b << 8) | 0xFF; }
+// Helper function to create an uint32_t color from 3 RGB values. The R, G and B values must be in range [0, 255].
+PERFORMANCEAPI_MAKE_COLOR :: inline ( r: u8, g: u8, b: u8 ) -> u32 { return ((cast(u32)r) << 24) | ((cast(u32)g) << 16) | ((cast(u32)b) << 8) | 0xFF; }
+
+// Use this define if you don't care about the color of an event and just want to use the default
 PERFORMANCEAPI_DEFAULT_COLOR :: 0xFFFFFFFF;
+
+// Set the name of the current thread to the specified thread name.
+ProfileSetCurrentThreadName :: ( name: string )
+{
+	PerformanceAPI_SetCurrentThreadName_N( name.data, cast,trunc(u16) name.length );
+}
 
 // Begin an instrumentation event with the specified ID and runtime data
 //
@@ -50,7 +59,7 @@ EndProfileEvent :: inline ()
 	PerformanceAPI_EndEvent();
 }
 
-// Automatic instrumentation event begin+end  for current scope
+// Automatic instrumentation event begin+end for current scope
 ProfileEvent :: ( id: string, data: string = "", color: u32 = PERFORMANCEAPI_DEFAULT_COLOR ) #expand
 {
 	PerformanceAPI_BeginEvent_N( id.data, cast(u16) id.count, data.data, cast(u16) data.count, color );
@@ -60,6 +69,7 @@ ProfileEvent :: ( id: string, data: string = "", color: u32 = PERFORMANCEAPI_DEF
 #scope_file
 
 PerformanceAPI_BeginEvent_N :: ( id: *u8, idLength: u16, data: *u8, dataLength: u16, color: u32 ) #foreign superluminal_lib;
+PerformanceAPI_SetCurrentThreadName_N :: ( inThreadName: *u8, inThreadNameLength: u16 ) #foreign superluminal_lib;
 
 // Helper struct that is used to prevent calls to EndEvent from being optimized to jmp instructions as part of tail call optimization.
 // You don't ever need to do anything with this as user of the API.
