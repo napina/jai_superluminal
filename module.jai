@@ -81,7 +81,7 @@ PerformanceAPI_SuppressTailCallOptimization :: struct
 PerformanceAPI_EndEvent :: () -> PerformanceAPI_SuppressTailCallOptimization #foreign superluminal_lib;
 
 #if OS == .WINDOWS {
-	#foreign_system_library "msvcprt";
-	#foreign_system_library "advapi32";
-	superluminal_lib :: #foreign_library,no_dll "win/PerformanceAPI_MD";
+	#system_library "msvcprt";
+	#system_library "advapi32";
+	superluminal_lib :: #library,no_dll "win/PerformanceAPI_MD";
 }
