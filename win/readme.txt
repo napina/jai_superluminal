@@ -1,1 +1,1 @@
-Copy files from "$(ProgramW6432)\Superluminal\Performance\API\lib\x64" here.
+Copy PerformanceAPI_MD.lib from "$(ProgramW6432)\Superluminal\Performance\API\lib\x64" here.
