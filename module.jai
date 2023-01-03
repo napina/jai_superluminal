@@ -28,6 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 // Bindings by Ville Ruusutie
 
+#module_parameters()(ENABLED := true);
+
 // Helper function to create an uint32_t color from 3 RGB values. The R, G and B values must be in range [0, 255].
 PERFORMANCEAPI_MAKE_COLOR :: inline ( r: u8, g: u8, b: u8 ) -> u32 { return ((cast(u32)r) << 24) | ((cast(u32)g) << 16) | ((cast(u32)b) << 8) | 0xFF; }
 
@@ -37,7 +39,7 @@ PERFORMANCEAPI_DEFAULT_COLOR :: 0xFFFFFFFF;
 // Set the name of the current thread to the specified thread name.
 ProfileSetCurrentThreadName :: ( name: string )
 {
-	PerformanceAPI_SetCurrentThreadName_N( name.data, cast,trunc(u16) name.length );
+	#if ENABLED then PerformanceAPI_SetCurrentThreadName_N( name.data, cast,trunc(u16) name.length );
 }
 
 // Begin an instrumentation event with the specified ID and runtime data
@@ -50,26 +52,64 @@ ProfileSetCurrentThreadName :: ( name: string )
 
 BeginProfileEvent :: inline ( id: string, data: string = "", color: u32 = PERFORMANCEAPI_DEFAULT_COLOR )
 {
-	PerformanceAPI_BeginEvent_N( id.data, cast(u16) id.count, data.data, cast(u16) data.count, color );
+	#if ENABLED then PerformanceAPI_BeginEvent_N( id.data, cast(u16) id.count, data.data, cast(u16) data.count, color );
 }
 
 // End an instrumentation event. Must be matched with a call to BeginProfileEvent within the same function
 EndProfileEvent :: inline ()
 {
-	PerformanceAPI_EndEvent();
+	#if ENABLED then PerformanceAPI_EndEvent();
 }
 
 // Automatic instrumentation event begin+end for current scope
 ProfileEvent :: ( id: string, data: string = "", color: u32 = PERFORMANCEAPI_DEFAULT_COLOR ) #expand
 {
-	PerformanceAPI_BeginEvent_N( id.data, cast(u16) id.count, data.data, cast(u16) data.count, color );
-	`defer PerformanceAPI_EndEvent();
+	#if ENABLED
+	{
+		PerformanceAPI_BeginEvent_N( id.data, cast(u16) id.count, data.data, cast(u16) data.count, color );
+		`defer PerformanceAPI_EndEvent();
+	}
+}
+
+// Call this function when a fiber starts running
+RegisterFiber :: inline ( inFiberID: u64 )
+{
+	#if ENABLED then PerformanceAPI_RegisterFiber( inFiberID );
+}
+
+// Call this function before a fiber ends
+UnregisterFiber :: inline ( inFiberID: u64 )
+{
+	#if ENABLED then PerformanceAPI_UnregisterFiber( inFiberID );
+}
+
+// The call to the Windows SwitchFiber function should be surrounded by BeginFiberSwitch and EndFiberSwitch calls. For example:
+//
+//	PerformanceAPI_BeginFiberSwitch(currentFiber, otherFiber);
+//	SwitchToFiber(otherFiber);
+//	PerformanceAPI_EndFiberSwitch(currentFiber);
+//
+// @param inCurrentFiberID    The currently running fiber
+// @param inNewFiberID		  The fiber we're switching to
+
+BeginFiberSwitch :: ( inCurrentFiberID: u64, inNewFiberID: u64 )
+{
+	#if ENABLED then PerformanceAPI_BeginFiberSwitch( inCurrentFiberID, inNewFiberID );
+}
+
+EndFiberSwitch :: ( inFiberID: u64 )
+{
+	#if ENABLED then PerformanceAPI_EndFiberSwitch( inFiberID );
 }
 
 #scope_file
 
 PerformanceAPI_BeginEvent_N :: ( id: *u8, idLength: u16, data: *u8, dataLength: u16, color: u32 ) #foreign superluminal_lib;
 PerformanceAPI_SetCurrentThreadName_N :: ( inThreadName: *u8, inThreadNameLength: u16 ) #foreign superluminal_lib;
+PerformanceAPI_RegisterFiber :: ( inFiberID: u64 ) #foreign superluminal_lib;
+PerformanceAPI_UnregisterFiber :: ( inFiberID: u64 ) #foreign superluminal_lib;
+PerformanceAPI_BeginFiberSwitch :: ( inCurrentFiberID: u64, inNewFiberID: u64 ) #foreign superluminal_lib;
+PerformanceAPI_EndFiberSwitch :: ( inFiberID: u64 ) #foreign superluminal_lib;
 
 // Helper struct that is used to prevent calls to EndEvent from being optimized to jmp instructions as part of tail call optimization.
 // You don't ever need to do anything with this as user of the API.
